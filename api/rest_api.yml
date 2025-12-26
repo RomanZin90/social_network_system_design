@@ -3,7 +3,6 @@ info:
   description: "Сервис Social Network - домашняя работа по курсу System Design"
   version: "1.0.0"
   title: "API Social Network"
-
 tags:
   - name: Feed
   - name: Post
