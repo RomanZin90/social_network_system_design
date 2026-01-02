@@ -1,0 +1,649 @@
+openapi: 3.0.0
+info:
+  description: "Сервис Social Network - домашняя работа по курсу System Design"
+  version: "1.0.0"
+  title: "API Social Network"
+tags:
+  - name: Feed
+  - name: Post
+  - name: Comment
+  - name: Like
+  - name: Photo
+  - name: Follow
+  - name: User
+
+paths:
+  /feed:
+    get:
+      summary: "Получение ленты"
+      description: "Метод получения ленты путешественников на которых подписан пользователь"
+      parameters:
+        - $ref: "#/components/parameters/FollowerId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      tags:
+        - Feed
+      responses:
+        "200":
+          description: "Лента ваших путешественников"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PostFeed"
+        "400":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /places/{place_geo}/feed:
+    get:
+      summary: "Получение ленты мест"
+      description: "Метод поиска интересных мест"
+      parameters:
+        - $ref: "#/components/parameters/PlaceGeo"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      tags:
+        - Feed
+      responses:
+        "200":
+          description: "Посты с данного места"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PostFeed"
+        "400":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /user/{user_id}/feed:
+    get:
+      summary: "Получение ленты путешественника"
+      description: "Метод получения ленты путешественника (в обратной хронологическом порядке)"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      tags:
+        - Feed
+      responses:
+        "200":
+          description: "Посты успешны выгружены"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PostFeed"
+        "404":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /user/{user_id}/post:
+    post:
+      summary: "Публикация поста"
+      description: "Метод создания/изменения поста. Публикация поста из путешествий с фото, небольшим описанием и привязкой к конкретному месту путешествия"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      tags:
+        - Post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, place_geo]
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                  description: "Идентификатор автора (пользователя)"
+                description:
+                  type: string
+                  description: "Описание путешествия"
+                  maxLength: 10000
+                place_geo:
+                  type: string
+                  description: "Место путешествия"
+                post_pic:
+                  type: array
+                  items:
+                    type: string
+                  description: "Фото поста"
+                  maxItems: 10
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post_id:
+                    type: string
+                    description: "Идентификатор поста"
+                required:
+                  - post_id
+        "400":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /post/{post_id}:
+    get:
+      summary: "Открыть пост автора"
+      description: "Метод открывает пост автора для просмотра"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      tags:
+        - Post
+      responses:
+        "200":
+          description: "Список моих путешествий"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+        "404":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /post/{object_id}/comments:
+    post:
+      summary: "Добавить комментарий"
+      description: "Метод добавляет комментарий к посту или к другому комментарию"
+      parameters:
+        - $ref: "#/components/parameters/ObjectId"
+      tags:
+        - Comment
+      requestBody:
+        required: true
+        description: "Запрос на создание комментария к посту"
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                  description: "Идентификатор автора комментария"
+                description:
+                  type: string
+                  description: "Текст комментария"
+                  maxLength: 300
+      responses:
+        "200":
+          description: "Комментарий добавлен"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "404":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+    delete:
+      summary: "Удаление комментария"
+      description: "Метод удаляет личный комментарий автора"
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      tags:
+        - Comment
+      responses:
+        "200":
+          description: "Комментарий удален"
+        "404":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+    get:
+      summary: "Получить список комментариев"
+      description: "Метод возвращает список комментариев либо к посту, либо к родительскому комментарию"
+      parameters:
+        - $ref: "#/components/parameters/ObjectId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      tags:
+        - Comment
+      responses:
+        "200":
+          description: "Комментарии поста"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "404":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /post/{object_id}/like:
+    post:
+      summary: "Поставить лайк"
+      description: "Метод оставляет реакцию на пост или комментарий"
+      parameters:
+        - $ref: "#/components/parameters/ObjectId"
+      tags:
+        - Like
+      requestBody:
+        required: true
+        description: "Запрос на добавление лайка"
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, object_id]
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                  description: "Идентификатор автора лайка"
+                object_id:
+                  type: string
+                  format: uuid
+                  description: "Идентификатор объекта"
+      responses:
+        "201":
+          description: "Лайк добавлен"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Like"
+        "400":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+    delete:
+      summary: "Удаление лайка"
+      description: "Метод удаляет реакцию с поста или комментария"
+      parameters:
+        - $ref: "#/components/parameters/LikeId"
+      tags:
+        - Like
+      responses:
+        "200":
+          description: "Лайк удален"
+        "404":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /photo:
+    post:
+      summary: "Загрузить фото"
+      description: "Метод загружает фото"
+      tags:
+        - Photo
+      requestBody:
+        description: "Запрос на загрузку"
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "Загружаемое фото"
+                  x-file-max-size: 1048576
+                  x-file-max-size-human: "1MB"
+                  x-allowed-mime-types:
+                    - image/jpeg
+                    - image/png
+      responses:
+        "200":
+          description: "Фото загружено"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Photo"
+        "400":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /users/{user_id}/follow:
+    post:
+      summary: "Подписаться на путешественника"
+      description: "Метод побавляет в ленту пользователя в посты выбранного путешественника"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      tags:
+        - Follow
+      requestBody:
+        required: true
+        description: "Запрос на подписку"
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                FollowerId:
+                  type: string
+                  format: uuid
+                  description: "Идентификатор подписчика"
+      responses:
+        "200":
+          description: "Подписка осуществлена"
+        "400":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+    delete:
+      summary: "Отписаться от путешественника"
+      description: "Метод удаляет посты путешественника из ленты пользователя"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/FollowerId"
+      tags:
+        - Follow
+      responses:
+        "200":
+          description: "Подписка удалена"
+        "400":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+  /user:
+    post:
+      summary: "Регистрация нового путешественника"
+      description: "Метод создает пользователя"
+      parameters:
+        - $ref: "#/components/parameters/UserName"
+      tags:
+        - User
+      requestBody:
+        required: true
+        description: "Запрос на регистрацию"
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  format: uuid
+                  description: "Имя пользователя"
+                  maxLength: 100
+      responses:
+        "200":
+          description: "Регистрация выполнена"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "400":
+          description: "Bad Request"
+        "500":
+          description: "Server error"
+
+components:
+  schemas:
+    Post:
+      description: "Пост"
+      type: object
+      properties:
+        post_id:
+          type: string
+          format: uuid
+          description: "Идентификатор"
+        author_id:
+          type: string
+          format: uuid
+          description: "Идентификатор автора (user_id)"
+        description:
+          type: string
+          description: "Текст поста"
+          maxLength: 10000
+        place_geo:
+          type: string
+          format: geography
+          description: "Геометка места"
+        comment_сnt:
+          type: number
+          description: "Количество комментариев"
+        like_cnt:
+          type: number
+          description: "Количество лайков"
+        photos:
+          type: array
+          description: "Фото"
+          items:
+            $ref: "#/components/schemas/Photo"
+          maxItems: 10
+        created:
+          type: string
+          format: datetime
+          description: "Время и дата создания"
+        updated:
+          type: string
+          format: datetime
+          description: "Время и дата обновления"
+    PostFeed:
+      description: "Визитка поста для ленты"
+      type: object
+      properties:
+        post_id:
+          type: string
+          format: uuid
+          description: "Идентификатор поста (post_id)"
+        author_id:
+          type: string
+          format: uuid
+          description: "Идентификатор автора (user_id)"
+        place_geo:
+          type: string
+          format: geography
+          description: "Геометка места"
+        comment_сnt:
+          type: number
+          description: "Количество комментариев"
+        like_cnt:
+          type: number
+          description: "Количество лайков"
+        photos:
+          type: array
+          description: "Фото"
+          items:
+            $ref: "#/components/schemas/Photo"
+          maxItems: 1
+        created:
+          type: string
+          format: datetime
+          description: "Время и дата создания"
+        updated:
+          type: string
+          format: datetime
+          description: "Время и дата обновления"
+    User:
+      description: "Пользователь"
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Идентификатор (user_id)"
+        name:
+          type: string
+          description: "Имя пользователя"
+    Comment:
+      description: "Комментарий"
+      type: object
+      properties:
+        comment_id:
+          type: string
+          format: uuid
+          description: "Идентификатор (comment_id)"
+        object_id:
+          type: string
+          format: uuid
+          description: "Идентификатор поста"
+        user_id:
+          type: string
+          format: uuid
+          description: "Идентификатор пользователя"
+        description:
+          type: string
+          description: "Текст комментария"
+          maxLength: 300
+        created:
+          type: string
+          format: datetime
+          description: "Время и дата создания"
+        updated:
+          type: string
+          format: datetime
+          description: "Время и дата обновления"
+        parent_id:
+          type: string
+          format: uuid
+          description: "Идентификатор родительского комментария"
+    Like:
+      description: "Реакция на пост"
+      type: object
+      properties:
+        like_id:
+          type: string
+          format: uuid
+          description: "Идентификатор (like_id)"
+        user_id:
+          type: string
+          format: uuid
+          description: "Идентификатор пользователя"
+        object_id:
+          type: string
+          format: uuid
+          description: "Идентификатор объекта (поста, комментария)"
+        created:
+          type: string
+          format: datetime
+          description: "Время и дата создания"
+    Photo:
+      description: "Фото, изображения"
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Идентификатор (photo_id)"
+        post_id:
+          type: string
+          format: uuid
+          description: "Идентификатор поста"
+        storage:
+          type: string
+          description: "Идентификатор в хранилище"
+        photo_size:
+          type: string
+          format: byte
+          description: "Размер фото"
+  parameters:
+    PostId:
+      name: post_id
+      in: path
+      description: "Идентификатор поста"
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserId:
+      name: user_id
+      in: path
+      description: "Идентификатор пользователя"
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserName:
+      name: name
+      in: path
+      description: "Имя пользователя"
+      required: true
+      schema:
+        type: string
+    FollowerId:
+      name: follower_id
+      in: query
+      description: "Идентификатор путешественника"
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PlaceGeo:
+      name: place_geo
+      in: query
+      description: "Геометка места"
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      description: "Номер скрина ленты"
+      required: false
+      schema:
+        type: number
+        default: 0
+        minimum: 0
+    PageSize:
+      name: pageSize
+      in: query
+      description: "Размер скрина ленты"
+      required: false
+      schema:
+        type: number
+        default: 10
+        maximum: 10
+    CommentId:
+      name: comment_id
+      in: path
+      description: "Идентификатор комментария"
+      required: true
+      schema:
+        type: string
+        format: uuid
+    LikeId:
+      name: like_id
+      in: path
+      description: "Идентификатор лайка"
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ObjectId:
+      name: object_id
+      in: path
+      description: "Идентификатор объекта для реакции"
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PhotoId:
+      name: fileId
+      in: path
+      description: "Идентификатор файла в хранилище"
+      required: true
+      schema:
+        type: string
